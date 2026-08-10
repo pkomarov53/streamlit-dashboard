@@ -1,7 +1,7 @@
 import urllib.parse
 import pandas as pd
 import streamlit as st
-from config import SPREADSHEET_ID, CACHE_TTL
+from applicaiton.config import SPREADSHEET_ID, CACHE_TTL
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner="Загрузка данных из Google Sheets...")
 def load_sheet_data(sheet_name: str, spreadsheet_id: str = SPREADSHEET_ID) -> pd.DataFrame:

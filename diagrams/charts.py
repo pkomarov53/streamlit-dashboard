@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from config import PALETTE
+from applicaiton.config import PALETTE
 
 def render_categorical_chart(df: pd.DataFrame, column_name: str, chart_type: str = "Круговая", key: str = '') -> None:
     clean_series = df[column_name].dropna()
@@ -92,7 +92,7 @@ def render_categorical_chart(df: pd.DataFrame, column_name: str, chart_type: str
     )
     
     chart_key = key or f"plotly_chart_{column_name}"
-    st.plotly_chart(fig, use_container_width=True, key=chart_key)
+    st.plotly_chart(fig, width='stretch', key=chart_key)
 
 def render_timeline_chart(df: pd.DataFrame) -> None:
     if "Отметка времени" not in df.columns or df["Отметка времени"].isnull().all():
@@ -127,4 +127,4 @@ def render_timeline_chart(df: pd.DataFrame) -> None:
         margin=dict(l=20, r=20, t=40, b=30)
     )
     
-    st.plotly_chart(fig, use_container_width=True, key="timeline_chart")
+    st.plotly_chart(fig, width='stretch', key="timeline_chart")

@@ -13,13 +13,6 @@ st.set_page_config(
 )
 
 def main():
-    try:
-        st.sidebar.image("logo.png", use_container_width=True)
-    except FileNotFoundError:
-        st.sidebar.markdown("**[МЕСТО ДЛЯ ЛОГОТИПА]**")
-        
-    st.sidebar.markdown("---")
-
     params = render_sidebar()
     selected_sheet = params["selected_sheet"]
     
@@ -83,7 +76,7 @@ def main():
             st.markdown("### Текстовые ответы (открытые вопросы)")
             for col in text_cols:
                 with st.expander(f"💬 {col.strip()}", expanded=False):
-                    st.dataframe(df[[col]].dropna(), use_container_width=True, hide_index=True)
+                    st.dataframe(df[[col]].dropna(), width='stretch', hide_index=True)
 
     with tab2:
         st.subheader("Детализация данных")
@@ -98,7 +91,7 @@ def main():
         )
         
         if selected_columns:
-            st.dataframe(df[selected_columns], use_container_width=True, hide_index=True)
+            st.dataframe(df[selected_columns], width='stretch', hide_index=True)
         else:
             st.info("Выберите хотя бы один столбец для отображения данных.")
 

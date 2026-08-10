@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from typing import Dict, Any
-from config import SHEET_NAMES
+from applicaiton.config import SHEET_NAMES
 
 def render_sidebar() -> Dict[str, Any]:
     st.sidebar.title("Панель управления")
