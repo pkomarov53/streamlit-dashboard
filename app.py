@@ -13,8 +13,6 @@ st.set_page_config(
 )
 
 def main():
-    # Логотип в левом верхнем углу
-    # Замени "logo.png" на путь к реальному файлу
     try:
         st.sidebar.image("logo.png", use_container_width=True)
     except FileNotFoundError:
@@ -22,7 +20,6 @@ def main():
         
     st.sidebar.markdown("---")
 
-    # Сайдбар и загрузка данных
     params = render_sidebar()
     selected_sheet = params["selected_sheet"]
     
@@ -30,14 +27,11 @@ def main():
     
     st.title(selected_sheet)
     
-    # Временный отказ от визуального предупреждения
     if raw_df.empty:
         return
 
-    # Применение фильтров (теперь в сайдбаре)
     df = apply_search_filter(raw_df, params["search_query"])
 
-    # Метрики (KPI)
     c1, c2, c3 = st.columns(3)
     c1.metric("Всего ответов", len(df))
     
@@ -53,34 +47,50 @@ def main():
 
     st.markdown("---")
 
-    # Вкладки без лишних символов
     tab1, tab2, tab3 = st.tabs(["Графики", "Таблица ответов", "Экспорт"])
 
     with tab1:
         render_timeline_chart(df)
         
-        cat_cols = [c for c in df.columns if c not in ["Отметка времени", "Ваш e-mail для связи"] and df[c].nunique() < 12]
+        # Разделяем на вопросы с выбором вариантов (<20 уникальных) и открытые текстовые
+        ignore_cols = ["Отметка времени", "Ваш e-mail для связи"]
+        cat_cols = [c for c in df.columns if c not in ignore_cols and df[c].nunique() < 20]
+        text_cols = [c for c in df.columns if c not in ignore_cols and df[c].nunique() >= 20]
         
         if cat_cols:
             st.markdown("### Детализация по вопросам")
             
-            # Вывод графиков для всех вопросов друг за другом
             for col in cat_cols:
-                render_categorical_chart(df, col)
-                st.markdown("---") # Визуальный разделитель между графиками
-        else:
-            st.info("На этом листе большинство ответов — развернутые текстовые поля.")
+                col_title, col_selector = st.columns([3, 1])
+                
+                with col_title:
+                    # Корректный вывод заголовка без лишних звездочек
+                    st.subheader(col.strip())
+                    
+                with col_selector:
+                    chart_type = st.selectbox(
+                        "Вид графика:",
+                        options=["Круговая", "Горизонтальная", "Вертикальная"],
+                        key=f"chart_type_{col}",
+                        label_visibility="collapsed"
+                    )
+                
+                render_categorical_chart(df, col, chart_type, key=f"plotly_{col}")
+                st.markdown("---")
+
+        # Блок для просмотра открытых текстовых вопросов (например, Вопрос №1)
+        if text_cols:
+            st.markdown("### Текстовые ответы (открытые вопросы)")
+            for col in text_cols:
+                with st.expander(f"💬 {col.strip()}", expanded=False):
+                    st.dataframe(df[[col]].dropna(), use_container_width=True, hide_index=True)
 
     with tab2:
         st.subheader("Детализация данных")
         
-        # Получаем список всех колонок
         all_columns = df.columns.tolist()
-        
-        # По умолчанию показываем первые 5-6 колонок (например, дату, email и пару первых вопросов)
         default_cols = all_columns[:6] if len(all_columns) > 6 else all_columns
         
-        # Селектор для выбора отображаемых столбцов
         selected_columns = st.multiselect(
             "Настройте видимые столбцы:",
             options=all_columns,
@@ -88,7 +98,6 @@ def main():
         )
         
         if selected_columns:
-            # Скрываем индекс для более чистого отображения таблицы
             st.dataframe(df[selected_columns], use_container_width=True, hide_index=True)
         else:
             st.info("Выберите хотя бы один столбец для отображения данных.")
@@ -96,7 +105,6 @@ def main():
     with tab3:
         render_export_ui(df, selected_sheet)
 
-    # Цикл автообновления
     if params["auto_refresh"]:
         time.sleep(params["refresh_interval"])
         st.cache_data.clear()
