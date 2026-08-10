@@ -7,14 +7,20 @@ def render_categorical_chart(df: pd.DataFrame, column_name: str) -> None:
     counts = df[column_name].value_counts().reset_index()
     counts.columns = [column_name, "Количество"]
     
-    fig = px.bar(
+    # Усекаем слишком длинные ответы для легенды, чтобы они не ломали верстку
+    max_label_length = 45
+    counts["Label"] = counts[column_name].astype(str).apply(
+        lambda x: x[:max_label_length] + "..." if len(x) > max_label_length else x
+    )
+    
+    fig = px.pie(
         counts,
-        x=column_name,
-        y="Количество",
-        text="Количество",
+        names="Label",
+        values="Количество",
         title=f"Распределение: {column_name}",
-        color="Количество",
-        color_continuous_scale=PALETTE["colorscale"]
+        color_discrete_sequence=PALETTE["colorscale"],
+        hole=0.35,
+        hover_data=[column_name] # Показываем полный текст ответа при наведении
     )
     
     fig.update_layout(
@@ -22,13 +28,18 @@ def render_categorical_chart(df: pd.DataFrame, column_name: str) -> None:
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(family="sans-serif", size=12, color=PALETTE["text"]),
         title_font=dict(size=14, color=PALETTE["secondary"]),
-        xaxis=dict(title="", tickangle=-25, showgrid=False),
-        yaxis=dict(title="Количество", showgrid=True, gridcolor="#ECEFF1"),
-        coloraxis_showscale=False,
         margin=dict(l=20, r=20, t=50, b=50),
-        height=420
+        height=500,
+        # Вертикальная легенда справа с автоматическим позиционированием
+        legend=dict(orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.0) 
     )
-    fig.update_traces(textposition="outside", marker_line_width=0)
+    
+    # Оставляем только проценты внутри секторов для чистоты визуализации
+    fig.update_traces(
+        textposition="inside", 
+        textinfo="percent",
+        hovertemplate="<b>%{customdata[0]}</b><br><br>Количество: %{value}<br>Доля: %{percent}<extra></extra>"
+    )
     
     st.plotly_chart(fig, use_container_width=True)
 
@@ -38,7 +49,7 @@ def render_timeline_chart(df: pd.DataFrame) -> None:
         
     timeline_df = df.set_index("Отметка времени").resample("D").size().reset_index(name="Ответы")
     
-    fig = px.line(
+    fig = px.area(
         timeline_df,
         x="Отметка времени",
         y="Ответы",

@@ -9,26 +9,33 @@ from report.generator import render_export_ui
 
 st.set_page_config(
     page_title="Дашборд анкет ПК",
-    page_icon="📊",
     layout="wide"
 )
 
 def main():
-    # Сайдбар
+    # Логотип в левом верхнем углу
+    # Замени "logo.png" на путь к реальному файлу
+    try:
+        st.sidebar.image("logo.png", use_container_width=True)
+    except FileNotFoundError:
+        st.sidebar.markdown("**[МЕСТО ДЛЯ ЛОГОТИПА]**")
+        
+    st.sidebar.markdown("---")
+
+    # Сайдбар и загрузка данных
     params = render_sidebar()
     selected_sheet = params["selected_sheet"]
     
-    # Загрузка данных
     raw_df = load_sheet_data(selected_sheet)
     
-    st.title(f"📊 {selected_sheet}")
+    st.title(selected_sheet)
     
+    # Временный отказ от визуального предупреждения
     if raw_df.empty:
-        st.warning("В данном листе нет данных или доступ ограничен.")
         return
 
-    # Фильтрация
-    df = apply_search_filter(raw_df)
+    # Применение фильтров (теперь в сайдбаре)
+    df = apply_search_filter(raw_df, params["search_query"])
 
     # Метрики (KPI)
     c1, c2, c3 = st.columns(3)
@@ -46,22 +53,45 @@ def main():
 
     st.markdown("---")
 
-    # Вкладки визуализации, данных и экспорта
-    tab1, tab2, tab3 = st.tabs(["📈 Графики", "📋 Таблица ответов", "📥 Экспорт"])
+    # Вкладки без лишних символов
+    tab1, tab2, tab3 = st.tabs(["Графики", "Таблица ответов", "Экспорт"])
 
     with tab1:
         render_timeline_chart(df)
         
-        # Выбор вопросов с ограниченным набором ответов
-        cat_cols = [c for c in df.columns if c not in ["Отметка времени", "Ваш e-mail для связи"] and df[c].nunique() < 25]
+        cat_cols = [c for c in df.columns if c not in ["Отметка времени", "Ваш e-mail для связи"] and df[c].nunique() < 12]
+        
         if cat_cols:
-            selected_col = st.selectbox("Выберите вопрос для анализа:", cat_cols)
-            render_categorical_chart(df, selected_col)
+            st.markdown("### Детализация по вопросам")
+            
+            # Вывод графиков для всех вопросов друг за другом
+            for col in cat_cols:
+                render_categorical_chart(df, col)
+                st.markdown("---") # Визуальный разделитель между графиками
         else:
             st.info("На этом листе большинство ответов — развернутые текстовые поля.")
 
     with tab2:
-        st.dataframe(df, use_container_width=True)
+        st.subheader("Детализация данных")
+        
+        # Получаем список всех колонок
+        all_columns = df.columns.tolist()
+        
+        # По умолчанию показываем первые 5-6 колонок (например, дату, email и пару первых вопросов)
+        default_cols = all_columns[:6] if len(all_columns) > 6 else all_columns
+        
+        # Селектор для выбора отображаемых столбцов
+        selected_columns = st.multiselect(
+            "Настройте видимые столбцы:",
+            options=all_columns,
+            default=default_cols
+        )
+        
+        if selected_columns:
+            # Скрываем индекс для более чистого отображения таблицы
+            st.dataframe(df[selected_columns], use_container_width=True, hide_index=True)
+        else:
+            st.info("Выберите хотя бы один столбец для отображения данных.")
 
     with tab3:
         render_export_ui(df, selected_sheet)
